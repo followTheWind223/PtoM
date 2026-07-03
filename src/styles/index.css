@@ -13,15 +13,15 @@ html, body, #root {
   height: 100%;
   width: 100%;
   overflow: hidden;
-  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-family: "Segoe UI", system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   color: #1a1a1a;
   background: #ffffff;
 }
 
 /* ===== 滚动条样式 ===== */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -29,18 +29,181 @@ html, body, #root {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
+  background: #d4d4d4;
+  border-radius: 4px;
+  background-clip: padding-box;
+  border: 2px solid transparent;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a1a1a1;
+  background: #a8a8a8;
+  background-clip: padding-box;
+  border: 2px solid transparent;
 }
 
 /* ===== Milkdown 编辑器容器 ===== */
 .milkdown-editor {
   height: 100%;
   overflow-y: auto;
+}
+
+/* ===== 类 Typora 排版：内容窄栏居中 ===== */
+.milkdown-editor .ProseMirror {
+  max-width: 50rem;
+  margin: 0 auto;
+  padding: 2.5rem 3rem 8rem;
+  outline: none;
+  font-size: 16px;
+  line-height: 1.75;
+  color: #2b2b2b;
+  caret-color: #3b82f6;
+}
+
+.milkdown-editor .ProseMirror h1,
+.milkdown-editor .ProseMirror h2,
+.milkdown-editor .ProseMirror h3,
+.milkdown-editor .ProseMirror h4,
+.milkdown-editor .ProseMirror h5,
+.milkdown-editor .ProseMirror h6 {
+  font-weight: 650;
+  line-height: 1.35;
+  margin: 1.6em 0 0.6em;
+  color: #1a1a1a;
+}
+
+.milkdown-editor .ProseMirror h1 {
+  font-size: 1.875em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid #ececec;
+}
+
+.milkdown-editor .ProseMirror h2 {
+  font-size: 1.5em;
+  padding-bottom: 0.25em;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.milkdown-editor .ProseMirror h3 { font-size: 1.25em; }
+.milkdown-editor .ProseMirror h4 { font-size: 1.1em; }
+
+.milkdown-editor .ProseMirror p {
+  margin: 0.6em 0;
+}
+
+.milkdown-editor .ProseMirror a {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.milkdown-editor .ProseMirror a:hover {
+  text-decoration: underline;
+}
+
+/* 行内代码 */
+.milkdown-editor .ProseMirror code {
+  font-family: "Cascadia Code", Consolas, "SF Mono", Menlo, monospace;
+  font-size: 0.875em;
+  background: #f3f4f6;
+  color: #db2777;
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+}
+
+/* 代码块 */
+.milkdown-editor .ProseMirror pre {
+  background: #f8f9fa;
+  border: 1px solid #ececec;
+  border-radius: 8px;
+  padding: 1em 1.25em;
+  margin: 1em 0;
+  overflow-x: auto;
+}
+
+.milkdown-editor .ProseMirror pre code {
+  background: transparent;
+  color: #1f2937;
+  padding: 0;
+  font-size: 0.85em;
+  line-height: 1.6;
+}
+
+/* 引用块 */
+.milkdown-editor .ProseMirror blockquote {
+  border-left: 4px solid #dbeafe;
+  background: #f8faff;
+  margin: 1em 0;
+  padding: 0.5em 1.25em;
+  color: #4b5563;
+  border-radius: 0 6px 6px 0;
+}
+
+/* 列表 */
+.milkdown-editor .ProseMirror ul,
+.milkdown-editor .ProseMirror ol {
+  padding-left: 1.5em;
+  margin: 0.6em 0;
+}
+
+.milkdown-editor .ProseMirror li {
+  margin: 0.25em 0;
+}
+
+.milkdown-editor .ProseMirror li p {
+  margin: 0.15em 0;
+}
+
+/* 表格 */
+.milkdown-editor .ProseMirror table {
+  border-collapse: collapse;
+  margin: 1.25em 0;
+  width: 100%;
+  font-size: 0.95em;
+}
+
+.milkdown-editor .ProseMirror th,
+.milkdown-editor .ProseMirror td {
+  border: 1px solid #e5e7eb;
+  padding: 0.5em 0.9em;
+  text-align: left;
+}
+
+.milkdown-editor .ProseMirror th {
+  background: #f9fafb;
+  font-weight: 600;
+}
+
+.milkdown-editor .ProseMirror tr:nth-child(even) td {
+  background: #fcfcfd;
+}
+
+/* 图片 */
+.milkdown-editor .ProseMirror img {
+  max-width: 100%;
+  border-radius: 6px;
+  margin: 0.5em 0;
+}
+
+/* 分隔线 */
+.milkdown-editor .ProseMirror hr {
+  border: none;
+  border-top: 2px solid #f0f0f0;
+  margin: 2em 0;
+}
+
+/* 任务列表 */
+.milkdown-editor .ProseMirror input[type='checkbox'] {
+  accent-color: #3b82f6;
+  margin-right: 0.4em;
+}
+
+/* ===== 浏览模式（只读）===== */
+.ptom-preview-mode .ProseMirror {
+  caret-color: transparent;
+  cursor: default;
+}
+
+.ptom-preview-mode .ProseMirror ::selection {
+  background-color: #dbeafe;
 }
 
 /* ===== 侧边栏过渡动画 ===== */

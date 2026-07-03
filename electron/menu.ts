@@ -44,6 +44,14 @@ export function createAppMenu(): Menu {
         },
         { type: 'separator' },
         {
+          label: '导入 PDF 并转换...',
+          accelerator: 'CmdOrCtrl+P',
+          click: (menuItem, browserWindow) => {
+            browserWindow?.webContents.send('menu:importPdf')
+          },
+        },
+        { type: 'separator' },
+        {
           label: '保存',
           accelerator: 'CmdOrCtrl+S',
           click: (menuItem, browserWindow) => {
@@ -88,10 +96,17 @@ export function createAppMenu(): Menu {
           },
         },
         {
-          label: '切换源码模式',
+          label: '源码模式',
           accelerator: 'CmdOrCtrl+/',
           click: (menuItem, browserWindow) => {
             browserWindow?.webContents.send('menu:toggleSourceMode')
+          },
+        },
+        {
+          label: '浏览模式（只读）',
+          accelerator: 'CmdOrCtrl+E',
+          click: (menuItem, browserWindow) => {
+            browserWindow?.webContents.send('menu:togglePreviewMode')
           },
         },
         { type: 'separator' },

@@ -1,12 +1,20 @@
 import { create } from 'zustand'
 import type { Editor } from '@milkdown/kit/core'
 
+/**
+ * 视图模式（类 Typora）：
+ * - wysiwyg: 编辑模式，所见即所得
+ * - source:  源码模式，纯文本编辑
+ * - preview: 浏览模式，只读渲染
+ */
+export type ViewMode = 'wysiwyg' | 'source' | 'preview'
+
 export interface OpenFile {
   path: string
   name: string
   content: string
   isModified: boolean
-  isSourceMode: boolean
+  mode: ViewMode
 }
 
 interface EditorState {
@@ -30,7 +38,9 @@ interface EditorState {
   setActiveFile: (index: number) => void
   updateContent: (filePath: string, content: string) => void
   markModified: (filePath: string, modified: boolean) => void
+  setMode: (filePath: string, mode: ViewMode) => void
   toggleSourceMode: (filePath: string) => void
+  togglePreviewMode: (filePath: string) => void
   toggleSidebar: () => void
   setWorkspacePath: (dirPath: string | null) => void
   addRecentFile: (filePath: string) => void
@@ -89,10 +99,32 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }))
   },
 
+  setMode: (filePath, mode) => {
+    set((state) => ({
+      openFiles: state.openFiles.map((f) =>
+        f.path === filePath ? { ...f, mode } : f
+      ),
+    }))
+  },
+
+  // 源码模式 ⇄ 编辑模式
   toggleSourceMode: (filePath) => {
     set((state) => ({
       openFiles: state.openFiles.map((f) =>
-        f.path === filePath ? { ...f, isSourceMode: !f.isSourceMode } : f
+        f.path === filePath
+          ? { ...f, mode: f.mode === 'source' ? 'wysiwyg' : 'source' }
+          : f
+      ),
+    }))
+  },
+
+  // 浏览模式 ⇄ 编辑模式
+  togglePreviewMode: (filePath) => {
+    set((state) => ({
+      openFiles: state.openFiles.map((f) =>
+        f.path === filePath
+          ? { ...f, mode: f.mode === 'preview' ? 'wysiwyg' : 'preview' }
+          : f
       ),
     }))
   },
