@@ -161,11 +161,37 @@ ipcMain.handle('python:health', async () => {
   }
 })
 
-// PDF 转 Markdown
+// 根据扩展名推断图片 MIME 类型
+function imageMime(name: string): string {
+  const ext = path.extname(name).toLowerCase().replace('.', '')
+  const map: Record<string, string> = {
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    gif: 'image/gif',
+    webp: 'image/webp',
+    svg: 'image/svg+xml',
+    bmp: 'image/bmp',
+  }
+  return map[ext] || 'image/png'
+}
+
+// 将转换器返回的图片（base64 映射）内联为 data URI，让 Markdown 自包含
+function inlineImages(markdown: string, images: Record<string, string>): string {
+  let result = markdown
+  for (const [name, base64] of Object.entries(images)) {
+    const dataUri = `data:${imageMime(name)};base64,${base64}`
+    // 匹配 ![...](name) 形式的引用
+    result = result.split(`](${name})`).join(`](${dataUri})`)
+  }
+  return result
+}
+
+// PDF 转 Markdown：转换成功后写入 PDF 同目录下的同名 .md 文件
 ipcMain.handle('python:convert', async (_event, pdfPath: string) => {
   const url = getPythonServiceUrl()
   if (!url) {
-    return { success: false, error: 'Python 服务未启动' }
+    return { success: false, error: 'PDF 转换服务未启动，请确认已安装 Python 环境及依赖（python-service/requirements.txt）' }
   }
   try {
     const response = await fetch(`${url}/convert`, {
@@ -174,11 +200,23 @@ ipcMain.handle('python:convert', async (_event, pdfPath: string) => {
       body: JSON.stringify({ pdf_path: pdfPath }),
     })
     if (!response.ok) {
-      const err = await response.json()
-      return { success: false, error: err.detail || '转换失败' }
+      const err = await response.json().catch(() => ({}))
+      return { success: false, error: (err as any).detail || '转换失败' }
     }
     const data = await response.json()
-    return { success: true, markdown: data.markdown, images: data.images || {} }
+    const markdown = inlineImages(data.markdown || '', data.images || {})
+
+    // 写入 PDF 同目录（失败不阻塞，仍返回内容供编辑）
+    const mdPath = pdfPath.replace(/\.pdf$/i, '.md')
+    let savedPath: string | null = null
+    try {
+      fs.writeFileSync(mdPath, markdown, 'utf-8')
+      savedPath = mdPath
+    } catch (e: any) {
+      console.warn('[Main] Failed to write converted markdown:', e.message)
+    }
+
+    return { success: true, markdown, mdPath: savedPath, pages: data.pages || 0 }
   } catch (error: any) {
     return { success: false, error: error.message }
   }

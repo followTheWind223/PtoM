@@ -1,14 +1,21 @@
 import { useEffect, useCallback, useState } from 'react'
+import { FileUp } from 'lucide-react'
 import { useEditorStore } from './stores/editorStore'
 import { useConvertStore } from './stores/convertStore'
 import { Sidebar } from './components/layout/Sidebar'
 import { MainArea } from './components/layout/MainArea'
 import { WelcomePage } from './components/WelcomePage'
+import {
+  openFileFromPath,
+  convertPdf,
+  handleDroppedFiles,
+  saveActiveFile,
+  saveActiveFileAs,
+} from './lib/fileOps'
 
 export default function App() {
-  const { openFiles, activeIndex, sidebarVisible } = useEditorStore()
-  const { setPythonRunning, setStatus, setProgress, setError, setResultMarkdown } =
-    useConvertStore()
+  const { openFiles, sidebarVisible } = useEditorStore()
+  const { setPythonRunning } = useConvertStore()
   const [isGlobalDragOver, setIsGlobalDragOver] = useState(false)
 
   // 启动时检查 Python 服务状态
@@ -26,115 +33,64 @@ export default function App() {
     checkPython()
   }, [setPythonRunning])
 
-  // 监听菜单事件
+  // 监听菜单事件（经由 preload 的 onMenu 订阅，contextIsolation 下无法直接访问 ipcRenderer）
   useEffect(() => {
-    const { ipcRenderer } = window as any
-    if (!ipcRenderer) return
+    const api = window.electronAPI
+    if (!api?.onMenu) return
 
-    const handleMenuOpenFile = async () => {
-      const filePath = await window.electronAPI.openFile()
-      if (filePath) {
-        openFileFromPath(filePath)
-      }
-    }
-
-    const handleMenuOpenFolder = async () => {
-      const dirPath = await window.electronAPI.openFolder()
-      if (dirPath) {
-        useEditorStore.getState().setWorkspacePath(dirPath)
-      }
-    }
-
-    const handleMenuSave = async () => {
-      const state = useEditorStore.getState()
-      const currentFile = state.openFiles[state.activeIndex]
-      if (currentFile) {
-        await window.electronAPI.writeFile(currentFile.path, currentFile.content)
-        useEditorStore.getState().markModified(currentFile.path, false)
-      }
-    }
-
-    const handleMenuSaveAs = async () => {
-      const state = useEditorStore.getState()
-      const currentFile = state.openFiles[state.activeIndex]
-      if (currentFile) {
-        const savePath = await window.electronAPI.saveFile(currentFile.name)
-        if (savePath) {
-          await window.electronAPI.writeFile(savePath, currentFile.content)
-          useEditorStore.getState().markModified(currentFile.path, false)
+    const unsubscribers = [
+      api.onMenu('menu:openFile', async () => {
+        const filePath = await api.openFile()
+        if (!filePath) return
+        if (filePath.toLowerCase().endsWith('.pdf')) {
+          await convertPdf(filePath)
+        } else {
+          await openFileFromPath(filePath)
         }
-      }
-    }
-
-    const handleToggleSidebar = () => {
-      useEditorStore.getState().toggleSidebar()
-    }
-
-    const handleToggleSourceMode = () => {
-      const state = useEditorStore.getState()
-      const currentFile = state.openFiles[state.activeIndex]
-      if (currentFile) {
-        useEditorStore.getState().toggleSourceMode(currentFile.path)
-      }
-    }
-
-    ipcRenderer.on('menu:openFile', handleMenuOpenFile)
-    ipcRenderer.on('menu:openFolder', handleMenuOpenFolder)
-    ipcRenderer.on('menu:save', handleMenuSave)
-    ipcRenderer.on('menu:saveAs', handleMenuSaveAs)
-    ipcRenderer.on('menu:toggleSidebar', handleToggleSidebar)
-    ipcRenderer.on('menu:toggleSourceMode', handleToggleSourceMode)
+      }),
+      api.onMenu('menu:openFolder', async () => {
+        const dirPath = await api.openFolder()
+        if (dirPath) {
+          useEditorStore.getState().setWorkspacePath(dirPath)
+        }
+      }),
+      api.onMenu('menu:importPdf', async () => {
+        const pdfPath = await api.openFile({
+          filters: [{ name: 'PDF 文件', extensions: ['pdf'] }],
+        })
+        if (pdfPath) {
+          await convertPdf(pdfPath)
+        }
+      }),
+      api.onMenu('menu:save', () => {
+        saveActiveFile()
+      }),
+      api.onMenu('menu:saveAs', () => {
+        saveActiveFileAs()
+      }),
+      api.onMenu('menu:toggleSidebar', () => {
+        useEditorStore.getState().toggleSidebar()
+      }),
+      api.onMenu('menu:toggleSourceMode', () => {
+        const state = useEditorStore.getState()
+        const currentFile = state.openFiles[state.activeIndex]
+        if (currentFile) {
+          state.toggleSourceMode(currentFile.path)
+        }
+      }),
+      api.onMenu('menu:togglePreviewMode', () => {
+        const state = useEditorStore.getState()
+        const currentFile = state.openFiles[state.activeIndex]
+        if (currentFile) {
+          state.togglePreviewMode(currentFile.path)
+        }
+      }),
+    ]
 
     return () => {
-      ipcRenderer.removeListener('menu:openFile', handleMenuOpenFile)
-      ipcRenderer.removeListener('menu:openFolder', handleMenuOpenFolder)
-      ipcRenderer.removeListener('menu:save', handleMenuSave)
-      ipcRenderer.removeListener('menu:saveAs', handleMenuSaveAs)
-      ipcRenderer.removeListener('menu:toggleSidebar', handleToggleSidebar)
-      ipcRenderer.removeListener('menu:toggleSourceMode', handleToggleSourceMode)
+      unsubscribers.forEach((unsub) => unsub())
     }
   }, [])
-
-  // 通过路径打开文件
-  const openFileFromPath = async (filePath: string) => {
-    if (!window.electronAPI) return
-    const result = await window.electronAPI.readFile(filePath)
-    if (result.success && result.content !== undefined) {
-      const name = filePath.split(/[/\\]/).pop() || filePath
-      useEditorStore.getState().openFile({
-        path: filePath,
-        name,
-        content: result.content,
-        isModified: false,
-        isSourceMode: false,
-      })
-      useEditorStore.getState().addRecentFile(filePath)
-    }
-  }
-
-  // PDF 转换
-  const convertPdf = async (pdfPath: string) => {
-    if (!window.electronAPI) return
-
-    setStatus('converting')
-    setProgress('正在解析 PDF...')
-
-    const result = await window.electronAPI.convertPdf(pdfPath)
-
-    if (result.success && result.markdown) {
-      setResultMarkdown(result.markdown)
-      const name = pdfPath.split(/[/\\]/).pop()?.replace('.pdf', '.md') || 'converted.md'
-      useEditorStore.getState().openFile({
-        path: pdfPath.replace('.pdf', '.md'),
-        name,
-        content: result.markdown,
-        isModified: true,
-        isSourceMode: false,
-      })
-    } else {
-      setError(result.error || '转换失败')
-    }
-  }
 
   // 全局拖拽处理
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -158,18 +114,7 @@ export default function App() {
     e.preventDefault()
     e.stopPropagation()
     setIsGlobalDragOver(false)
-
-    const files = Array.from(e.dataTransfer.files)
-    for (const file of files) {
-      const filePath = (file as any).path
-      if (!filePath) continue
-
-      if (file.name.endsWith('.pdf')) {
-        await convertPdf(filePath)
-      } else if (file.name.endsWith('.md') || file.name.endsWith('.txt')) {
-        await openFileFromPath(filePath)
-      }
-    }
+    await handleDroppedFiles(Array.from(e.dataTransfer.files))
   }, [])
 
   const hasOpenFiles = openFiles.length > 0
@@ -192,21 +137,16 @@ export default function App() {
 
       {/* 主编辑区 */}
       <div className="flex-1 flex flex-col min-w-0 relative">
-        {hasOpenFiles ? (
-          <MainArea />
-        ) : (
-          <WelcomePage />
-        )}
+        {hasOpenFiles ? <MainArea /> : <WelcomePage />}
 
         {/* 全局拖拽覆盖层 */}
         {isGlobalDragOver && (
-          <div className="absolute inset-0 z-50 bg-blue-500/10 border-4 border-dashed border-blue-400 rounded-lg flex items-center justify-center pointer-events-none">
-            <div className="bg-white rounded-xl shadow-lg px-6 py-4 text-center">
-              <p className="text-lg font-semibold text-blue-600">
-                释放文件以导入
-              </p>
-              <p className="text-sm text-gray-400 mt-1">
-                支持 PDF、Markdown 文件
+          <div className="absolute inset-4 z-50 bg-blue-500/5 backdrop-blur-[2px] border-2 border-dashed border-blue-400 rounded-2xl flex items-center justify-center pointer-events-none">
+            <div className="bg-white rounded-2xl shadow-xl px-8 py-6 text-center">
+              <FileUp className="w-8 h-8 text-blue-500 mx-auto mb-2" />
+              <p className="text-base font-semibold text-gray-700">释放文件以导入</p>
+              <p className="text-xs text-gray-400 mt-1">
+                PDF 自动转换为 Markdown · MD 直接打开
               </p>
             </div>
           </div>

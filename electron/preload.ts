@@ -1,4 +1,16 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
+
+/** 菜单事件通道白名单，防止渲染进程监听任意 IPC */
+const MENU_CHANNELS = [
+  'menu:openFile',
+  'menu:openFolder',
+  'menu:importPdf',
+  'menu:save',
+  'menu:saveAs',
+  'menu:toggleSidebar',
+  'menu:toggleSourceMode',
+  'menu:togglePreviewMode',
+] as const
 
 /**
  * 通过 contextBridge 安全地向渲染进程暴露 API
@@ -19,7 +31,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
   exists: (filePath: string) => ipcRenderer.invoke('fs:exists', filePath),
   stat: (filePath: string) => ipcRenderer.invoke('fs:stat', filePath),
 
+  // ---- 拖拽文件 ----
+  // Electron 31+ 中 File.path 已废弃，必须经由 webUtils 获取真实路径
+  getPathForFile: (file: File) => webUtils.getPathForFile(file),
+
   // ---- Python 转换 ----
   checkPythonHealth: () => ipcRenderer.invoke('python:health'),
   convertPdf: (pdfPath: string) => ipcRenderer.invoke('python:convert', pdfPath),
+
+  // ---- 菜单事件 ----
+  onMenu: (channel: string, callback: () => void) => {
+    if (!MENU_CHANNELS.includes(channel as (typeof MENU_CHANNELS)[number])) {
+      return () => {}
+    }
+    const listener = () => callback()
+    ipcRenderer.on(channel, listener)
+    return () => ipcRenderer.removeListener(channel, listener)
+  },
 })

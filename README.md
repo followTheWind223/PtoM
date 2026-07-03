@@ -4,8 +4,8 @@
 
 ## 功能特性
 
-- **PDF 转 Markdown** — 基于 marker-pdf 引擎，高质量转换 PDF 文档为 Markdown，支持表格、公式、图片和代码块
-- **WYSIWYG 编辑** — 所见即所得编辑体验（类 Typora），支持源码模式切换
+- **PDF 转 Markdown** — 默认基于 pymupdf4llm 引擎（可选 marker-pdf 获得最高质量），支持标题、表格、图片提取；转换结果自动保存到 PDF 同目录
+- **三种视图模式（类 Typora）** — 编辑模式（所见即所得）/ 源码模式（Ctrl+/）/ 浏览模式（只读，Ctrl+E）
 - **文件树浏览** — 侧边栏目录树，支持多级文件夹展开和文件搜索
 - **多标签页** — 同时打开多个文档，标签页间自由切换
 - **一键导出** — 支持导出为 PDF、HTML 等格式
@@ -25,7 +25,8 @@
 - **[Vite](https://vitejs.dev/)** — 前端构建工具
 
 ### PDF 转换引擎
-- **[marker-pdf](https://github.com/VikParuchuri/marker)** — Python 生态中最好的 PDF 转 Markdown 工具之一，对表格、公式、图片有优秀处理能力
+- **[pymupdf4llm](https://pymupdf.readthedocs.io/en/latest/pymupdf4llm/)** — 默认引擎，轻量快速，保留标题层级 / 表格 / 图片
+- **[marker-pdf](https://github.com/VikParuchuri/marker)**（可选）— 质量最优，对公式与复杂版面处理更好，但依赖 PyTorch 体积较大；安装后自动优先使用
 - **[FastAPI](https://fastapi.tiangolo.com/)** — Python 侧本地 HTTP 服务，负责与 Electron 通信
 - **[PyInstaller](https://pyinstaller.org/)** — 将 Python 服务打包为独立可执行文件
 

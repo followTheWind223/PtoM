@@ -13,7 +13,9 @@ export interface FileStat {
 export interface ConvertResult {
   success: boolean
   markdown?: string
-  images?: Record<string, string>
+  /** 转换结果已写盘时的真实路径 */
+  mdPath?: string | null
+  pages?: number
   error?: string
 }
 
@@ -32,9 +34,15 @@ export interface ElectronAPI {
   exists: (filePath: string) => Promise<boolean>
   stat: (filePath: string) => Promise<{ success: boolean; stat?: FileStat; error?: string }>
 
+  // 拖拽文件路径（Electron webUtils）
+  getPathForFile: (file: File) => string
+
   // Python 转换
   checkPythonHealth: () => Promise<{ running: boolean }>
   convertPdf: (pdfPath: string) => Promise<ConvertResult>
+
+  // 菜单事件订阅，返回取消订阅函数
+  onMenu: (channel: string, callback: () => void) => () => void
 }
 
 declare global {

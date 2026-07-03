@@ -1,6 +1,8 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
+import '@milkdown/kit/prose/view/style/prosemirror.css'
+import '@milkdown/kit/prose/tables/style/tables.css'
 import './styles/index.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

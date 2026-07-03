@@ -1,5 +1,12 @@
 import { useEffect, useRef } from 'react'
-import { Editor, rootCtx, defaultValueCtx, rootAttrsCtx } from '@milkdown/kit/core'
+import {
+  Editor,
+  rootCtx,
+  defaultValueCtx,
+  rootAttrsCtx,
+  editorViewCtx,
+  editorViewOptionsCtx,
+} from '@milkdown/kit/core'
 import { commonmark } from '@milkdown/kit/preset/commonmark'
 import { gfm } from '@milkdown/kit/preset/gfm'
 import { nord } from '@milkdown/theme-nord'
@@ -8,6 +15,7 @@ import { history } from '@milkdown/kit/plugin/history'
 import { indent } from '@milkdown/kit/plugin/indent'
 import { trailing } from '@milkdown/kit/plugin/trailing'
 import { cursor } from '@milkdown/kit/plugin/cursor'
+import { clipboard } from '@milkdown/kit/plugin/clipboard'
 import { replaceAll, getMarkdown } from '@milkdown/kit/utils'
 import { useEditorStore, type OpenFile } from '../../stores/editorStore'
 
@@ -22,12 +30,14 @@ export function MarkdownEditor({ file, onChange, isActive }: MarkdownEditorProps
   const containerRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const isInternalChange = useRef(false)
+  // 由 ProseMirror 的 editable() 回调实时读取，切换模式无需重建编辑器
+  const editableRef = useRef(file.mode !== 'preview')
+
+  editableRef.current = file.mode !== 'preview'
 
   // 创建 Milkdown 编辑器实例（仅在挂载时）
   useEffect(() => {
     if (!containerRef.current) return
-
-    let editor: Editor | null = null
 
     Editor.make()
       .config((ctx) => {
@@ -39,6 +49,10 @@ export function MarkdownEditor({ file, onChange, isActive }: MarkdownEditorProps
           class: 'milkdown-editor',
           'data-milkdown-root': 'true',
         })
+        // 浏览模式只读
+        ctx.set(editorViewOptionsCtx, {
+          editable: () => editableRef.current,
+        })
       })
       .use(commonmark)
       .use(gfm)
@@ -47,6 +61,7 @@ export function MarkdownEditor({ file, onChange, isActive }: MarkdownEditorProps
       .use(indent)
       .use(trailing)
       .use(cursor)
+      .use(clipboard)
       .create()
       .then((created) => {
         editorRef.current = created
@@ -95,7 +110,17 @@ export function MarkdownEditor({ file, onChange, isActive }: MarkdownEditorProps
     }
   }, [isActive])
 
-  // 当外部内容变化时（如切换文件），更新编辑器内容
+  // 模式切换时让 ProseMirror 重新求值 editable()
+  useEffect(() => {
+    const editor = editorRef.current
+    if (!editor) return
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      view.dispatch(view.state.tr)
+    })
+  }, [file.mode])
+
+  // 当外部内容变化时（如源码模式编辑后切回），更新编辑器内容
   useEffect(() => {
     const editor = editorRef.current
     if (!editor || isInternalChange.current) return
@@ -114,20 +139,20 @@ export function MarkdownEditor({ file, onChange, isActive }: MarkdownEditorProps
 
   // 源码模式切换时聚焦 textarea
   useEffect(() => {
-    if (isActive && file.isSourceMode && textareaRef.current) {
+    if (isActive && file.mode === 'source' && textareaRef.current) {
       textareaRef.current.focus()
     }
-  }, [isActive, file.isSourceMode])
+  }, [isActive, file.mode])
 
   // 源码模式：纯文本编辑
-  if (file.isSourceMode) {
+  if (file.mode === 'source') {
     return (
-      <div className="h-full flex flex-col">
+      <div className="h-full flex flex-col bg-editor-bg">
         <textarea
           ref={textareaRef}
           value={file.content}
           onChange={(e) => onChange(e.target.value)}
-          className="flex-1 w-full resize-none border-0 outline-none p-6 font-mono text-sm leading-relaxed bg-editor-bg text-editor-text"
+          className="flex-1 w-full resize-none border-0 outline-none px-8 py-6 font-mono text-[13px] leading-relaxed bg-editor-bg text-editor-text max-w-4xl mx-auto"
           placeholder="开始编辑 Markdown..."
           spellCheck={false}
         />
@@ -135,9 +160,13 @@ export function MarkdownEditor({ file, onChange, isActive }: MarkdownEditorProps
     )
   }
 
-  // WYSIWYG 模式：Milkdown 编辑器
+  // 编辑 / 浏览模式：Milkdown 编辑器（浏览模式只读）
   return (
-    <div className="h-full overflow-hidden">
+    <div
+      className={`h-full overflow-hidden ${
+        file.mode === 'preview' ? 'ptom-preview-mode' : ''
+      }`}
+    >
       <div ref={containerRef} className="h-full" />
     </div>
   )
