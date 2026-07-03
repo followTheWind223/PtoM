@@ -1,0 +1,15 @@
+# PtoM Python 转换服务依赖
+
+# Web 框架
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+
+# PDF 转换引擎（首选）
+marker-pdf>=1.0.0
+
+# PDF 转换引擎（回退方案）
+PyMuPDF>=1.24.0
+pdfplumber>=0.11.0
+
+# 数据校验
+pydantic>=2.0.0

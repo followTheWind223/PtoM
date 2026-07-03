@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+python-service/__pycache__/
+python-service/*.pyc
+python-service/.venv/
+python-service/venv/
+
+# Build outputs
+dist/
+dist-electron/
+release/
+python-service-dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.local
+
+# Logs
+*.log

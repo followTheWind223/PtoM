@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===== 基础样式 ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: #1a1a1a;
+  background: #ffffff;
+}
+
+/* ===== 滚动条样式 ===== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* ===== Milkdown 编辑器容器 ===== */
+.milkdown-editor {
+  height: 100%;
+  overflow-y: auto;
+}
+
+/* ===== 侧边栏过渡动画 ===== */
+.sidebar-transition {
+  transition: width 0.2s ease-in-out;
+}
+
+/* ===== 选中文本颜色 ===== */
+::selection {
+  background-color: #d3e3fd;
+  color: #1a1a1a;
+}
